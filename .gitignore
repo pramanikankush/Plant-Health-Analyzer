@@ -14,6 +14,11 @@ __pycache__/
 env/
 venv/
 .venv/
+myenv/
+Scripts/
+Lib/
+Include/
+pyvenv.cfg
 
 # Database
 *.db
@@ -43,3 +48,10 @@ uploads/
 # Temporary files
 *.tmp
 *.temp
+
+# Node modules (if any)
+node_modules/
+
+# Build directories
+build/
+dist/
