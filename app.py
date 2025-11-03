@@ -1,12 +1,11 @@
-from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for, abort
 import google.generativeai as genai
 import os
 from PIL import Image
 import io
 from dotenv import load_dotenv
 import html
-import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
@@ -14,88 +13,76 @@ import sqlite3
 import uuid
 from supabase import create_client, Client
 from functools import wraps
+from werkzeug.utils import secure_filename
+import re
+import secrets
 
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
+app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
-# Configure Supabase
-supabase_url = os.environ.get('SUPABASE_URL')
-supabase_key = os.environ.get('SUPABASE_KEY')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Supabase setup
+supabase_url = os.getenv('SUPABASE_URL')
+supabase_key = os.getenv('SUPABASE_KEY')
+if not supabase_url or not supabase_key:
+    print("ERROR: SUPABASE_URL and SUPABASE_KEY must be set")
+    exit(1)
 supabase: Client = create_client(supabase_url, supabase_key)
 
-# Configure Gemini API
-genai.configure(api_key=os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY'))
+# Gemini setup
+api_key = os.getenv('GOOGLE_API_KEY')
+if not api_key:
+    print("ERROR: GOOGLE_API_KEY must be set")
+    exit(1)
+genai.configure(api_key=api_key)
 model = genai.GenerativeModel('gemini-2.0-flash-exp')
 
-# Initialize database
+# Database
+def get_db():
+    conn = sqlite3.connect('analysis_history.db', check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 def init_db():
-    conn = sqlite3.connect('analysis_history.db')
+    conn = get_db()
     c = conn.cursor()
-    c.execute('DROP TABLE IF EXISTS analyses')
-    c.execute('''
-        CREATE TABLE analyses (
-            id TEXT PRIMARY KEY,
-            timestamp TEXT,
-            plant_type TEXT,
-            health_status TEXT,
-            disease_name TEXT,
-            symptoms TEXT,
-            treatment TEXT,
-            medicines TEXT,
-            severity TEXT,
-            cost_estimate TEXT,
-            image_name TEXT
-        )
-    ''')
+    c.execute('''CREATE TABLE IF NOT EXISTS analyses (
+        id TEXT PRIMARY KEY, user_id TEXT, timestamp TEXT, plant_type TEXT,
+        health_status TEXT, disease_name TEXT, symptoms TEXT, treatment TEXT,
+        medicines TEXT, severity TEXT, cost_estimate TEXT, image_name TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS reminders (
+        id TEXT PRIMARY KEY, user_id TEXT, analysis_id TEXT, reminder_date TEXT,
+        task_description TEXT, status TEXT, proof_image TEXT, completed_at TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS progress_tracking (
+        id TEXT PRIMARY KEY, user_id TEXT, original_analysis_id TEXT,
+        followup_analysis_id TEXT, improvement_percentage REAL,
+        severity_change TEXT, created_at TEXT)''')
     conn.commit()
     conn.close()
 
 init_db()
 
-# Auth decorator
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def login_required(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def decorated(*args, **kwargs):
         if 'user' not in session:
             return redirect(url_for('login'))
         return f(*args, **kwargs)
-    return decorated_function
+    return decorated
 
-# Language translations
-TRANSLATIONS = {
-    'en': {
-        'upload_image': 'Upload Image',
-        'analyze_leaf': 'Analyze Leaf',
-        'plant_type': 'Plant Type',
-        'health_status': 'Health Status',
-        'disease_name': 'Disease Name',
-        'symptoms': 'Symptoms',
-        'treatment': 'Treatment',
-        'severity': 'Severity'
-    },
-    'es': {
-        'upload_image': 'Subir Imagen',
-        'analyze_leaf': 'Analizar Hoja',
-        'plant_type': 'Tipo de Planta',
-        'health_status': 'Estado de Salud',
-        'disease_name': 'Nombre de Enfermedad',
-        'symptoms': 'Síntomas',
-        'treatment': 'Tratamiento',
-        'severity': 'Severidad'
-    },
-    'hi': {
-        'upload_image': 'छवि अपलोड करें',
-        'analyze_leaf': 'पत्ती का विश्लेषण करें',
-        'plant_type': 'पौधे का प्रकार',
-        'health_status': 'स्वास्थ्य स्थिति',
-        'disease_name': 'रोग का नाम',
-        'symptoms': 'लक्षण',
-        'treatment': 'उपचार',
-        'severity': 'गंभीरता'
-    }
-}
+# Routes
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/login')
 def login():
@@ -105,206 +92,424 @@ def login():
 def signup():
     return render_template('signup.html')
 
-@app.route('/auth/login', methods=['POST'])
-def auth_login():
-    email = request.json.get('email')
-    password = request.json.get('password')
-    
-    try:
-        response = supabase.auth.sign_in_with_password({"email": email, "password": password})
-        if response.user:
-            session['user'] = {
-                'id': response.user.id,
-                'email': response.user.email
-            }
-            return jsonify({'success': True})
-        else:
-            return jsonify({'error': 'Invalid credentials'}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+@app.route('/reminders')
+def reminders():
+    return render_template('reminders.html')
 
-@app.route('/auth/signup', methods=['POST'])
-def auth_signup():
-    email = request.json.get('email')
-    password = request.json.get('password')
-    
-    try:
-        response = supabase.auth.sign_up({"email": email, "password": password})
-        if response.user:
-            return jsonify({'success': True, 'message': 'Account created. Please check your email for verification.'})
-        else:
-            return jsonify({'error': 'Failed to create account'}), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+@app.route('/progress')
+def progress():
+    return render_template('progress.html')
+
+@app.route('/alerts')
+def alerts():
+    return render_template('alerts.html')
+
+@app.route('/cost-reports')
+def cost_reports():
+    return render_template('cost_reports.html')
+
+@app.route('/profile')
+def profile():
+    return render_template('profile.html')
+
+@app.route('/help')
+def help_guide():
+    return render_template('help.html')
 
 @app.route('/logout')
 def logout():
-    session.pop('user', None)
+    session.clear()
     return redirect(url_for('login'))
 
-@app.route('/')
-@login_required
-def index():
-    lang = request.args.get('lang', 'en')
-    return render_template('index.html', lang=lang, translations=TRANSLATIONS.get(lang, TRANSLATIONS['en']))
+# Auth
+@app.route('/auth/login', methods=['POST'])
+def auth_login():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        if not response.user:
+            return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+        
+        session['user'] = response.user.id
+        session.permanent = True
+        return jsonify({'success': True})
+    except Exception as e:
+        error_msg = str(e)
+        if 'Email not confirmed' in error_msg:
+            return jsonify({'success': False, 'error': 'Please verify your email'}), 401
+        return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
 
+@app.route('/auth/signup', methods=['POST'])
+def auth_signup():
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        response = supabase.auth.sign_up({"email": email, "password": password})
+        return jsonify({'success': True, 'message': 'Account created! Please login.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# Analyze
 @app.route('/analyze', methods=['POST'])
-@login_required
 def analyze():
-    files = request.files.getlist('images') if 'images' in request.files else [request.files.get('image')]
-    
-    if not files or all(f.filename == '' for f in files):
-        return jsonify({'error': 'No images uploaded'}), 400
-    
-    results = []
-    
-    for file in files:
-        if file and file.filename != '':
+    try:
+        files = request.files.getlist('images') if 'images' in request.files else [request.files.get('image')]
+        files = [f for f in files if f and f.filename]
+        
+        if not files:
+            return jsonify({'error': 'No images uploaded'}), 400
+        if len(files) > 10:
+            return jsonify({'error': 'Maximum 10 images allowed'}), 400
+        
+        user_id = session.get('user', 'guest')
+        results = []
+        
+        for file in files:
             try:
-                image = Image.open(io.BytesIO(file.read()))
+                filename = secure_filename(file.filename)
+                if not allowed_file(filename):
+                    results.append({'filename': filename, 'error': 'Invalid file type'})
+                    continue
                 
-                prompt = """Analyze this leaf image for plant disease detection. Provide a detailed analysis in this EXACT format:
+                file_data = file.read()
+                if not file_data or len(file_data) > 10 * 1024 * 1024:
+                    results.append({'filename': filename, 'error': 'File too large or empty'})
+                    continue
+                
+                image = Image.open(io.BytesIO(file_data))
+                
+                prompt = """Analyze this leaf image for plant disease detection. Provide analysis in this EXACT format:
 
-Plant Type: [specific plant species name]
+Plant Type: [plant species]
 Health Status: [Healthy/Diseased]
-Disease Name: [specific disease name if diseased, otherwise "None"]
-Symptoms: [detailed description of visible symptoms on the leaf - spots, discoloration, wilting, etc.]
-Treatment: [comprehensive step-by-step treatment plan including cultural practices, timing, and application methods]
-Medicines: [List specific medicines available in Indian market with exact names and prices:
-- Fungicides: Antracol (Propineb 70% WP) 2g/L - ₹85, Blitox (Copper Oxychloride 50% WP) 3g/L - ₹45
-- Bactericides: Streptocycline (Streptomycin + Tetracycline) 1g/L - ₹120
-- Insecticides: Confidor (Imidacloprid 17.8% SL) 0.5ml/L - ₹95
-- Fertilizers: NPK 19:19:19 (500g) - ₹65, Urea (1kg) - ₹25]
+Disease Name: [disease name or "None"]
+Symptoms: [visible symptoms]
+Treatment: [Day 1 - action, Day 3 - action, Day 7 - action, Day 14 - action]
+Medicines: [Indian market medicines with prices, e.g., Antracol 2g/L - ₹85]
 Severity: [Mild/Moderate/Severe]
-Cost Estimate: [total treatment cost in ₹ format like ₹250-300]
-
-IMPORTANT: Use real medicine brands sold in India like Tata Rallis, UPL, Bayer, Syngenta, BASF products. Include current 2024 market prices."""
+Cost Estimate: [₹250-300]"""
                 
                 response = model.generate_content([prompt, image])
                 analysis = html.unescape(response.text)
-                # Clean up any remaining HTML entities
-                analysis = analysis.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"').replace('&#39;', "'")
-                
-                # Parse analysis
                 parsed = parse_analysis(analysis)
-                
-                # Save to database
                 analysis_id = str(uuid.uuid4())
-                save_analysis(analysis_id, parsed, file.filename)
+                
+                if user_id != 'guest':
+                    save_analysis(analysis_id, parsed, filename, user_id)
                 
                 results.append({
                     'id': analysis_id,
-                    'filename': file.filename,
+                    'filename': filename,
                     'analysis': analysis,
                     'parsed': parsed
                 })
                 
             except Exception as e:
-                results.append({
-                    'filename': file.filename,
-                    'error': str(e)
-                })
-    
-    return jsonify({'success': True, 'results': results})
+                results.append({'filename': filename, 'error': f'Analysis failed: {str(e)}'})
+        
+        if not results:
+            return jsonify({'error': 'No images analyzed'}), 400
+            
+        return jsonify({'success': True, 'results': results})
+        
+    except Exception as e:
+        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
 def parse_analysis(text):
-    lines = text.split('\n')
     parsed = {}
     current_key = None
     current_value = []
     
-    for line in lines:
+    for line in text.split('\n'):
         line = line.strip()
         if not line:
             continue
             
-        # Check if line starts with a key (contains colon)
-        if ':' in line and any(key in line.lower() for key in ['plant type', 'health status', 'disease name', 'symptoms', 'treatment', 'medicines', 'severity', 'cost estimate']):
-            # Save previous key-value pair
+        if ':' in line and any(k in line.lower() for k in ['plant type', 'health status', 'disease name', 'symptoms', 'treatment', 'medicines', 'severity', 'cost estimate']):
             if current_key:
                 parsed[current_key] = ' '.join(current_value).strip()
             
-            # Start new key-value pair
             key, value = line.split(':', 1)
-            current_key = key.strip().lower().replace(' ', '_').replace('&', '')
+            current_key = key.strip().lower().replace(' ', '_')
             current_value = [value.strip()] if value.strip() else []
         else:
-            # Continue previous value (multi-line content)
             if current_key:
                 current_value.append(line)
     
-    # Save the last key-value pair
     if current_key:
         parsed[current_key] = ' '.join(current_value).strip()
     
     return parsed
 
-def save_analysis(analysis_id, parsed, filename):
-    conn = sqlite3.connect('analysis_history.db')
-    c = conn.cursor()
-    c.execute('''
-        INSERT INTO analyses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        analysis_id,
-        datetime.now().isoformat(),
-        parsed.get('plant_type', ''),
-        parsed.get('health_status', ''),
-        parsed.get('disease_name', ''),
-        parsed.get('symptoms', ''),
-        parsed.get('treatment', ''),
-        parsed.get('medicines', ''),
-        parsed.get('severity', ''),
-        parsed.get('cost_estimate', ''),
-        filename
-    ))
-    conn.commit()
-    conn.close()
+def save_analysis(analysis_id, parsed, filename, user_id):
+    conn = get_db()
+    try:
+        c = conn.cursor()
+        c.execute('INSERT INTO analyses VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
+            analysis_id, user_id, datetime.now().isoformat(),
+            parsed.get('plant_type', ''), parsed.get('health_status', ''),
+            parsed.get('disease_name', ''), parsed.get('symptoms', ''),
+            parsed.get('treatment', ''), parsed.get('medicines', ''),
+            parsed.get('severity', ''), parsed.get('cost_estimate', ''), filename
+        ))
+        conn.commit()
+        create_reminders(analysis_id, user_id, parsed.get('treatment', ''), c, conn)
+    except Exception as e:
+        print(f"Error saving: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+def create_reminders(analysis_id, user_id, treatment, cursor, conn):
+    try:
+        matches = re.findall(r'Day\s+(\d+)\s*[-:]?\s*([^\n]+)', treatment, re.IGNORECASE)
+        for day, task in matches[:4]:
+            cursor.execute('INSERT INTO reminders VALUES (?, ?, ?, ?, ?, ?, ?, ?)', (
+                str(uuid.uuid4()), user_id, analysis_id,
+                (datetime.now() + timedelta(days=int(day))).isoformat(),
+                task.strip()[:200], 'pending', None, None
+            ))
+        conn.commit()
+    except Exception as e:
+        print(f"Error creating reminders: {e}")
 
 @app.route('/history')
 def history():
-    conn = sqlite3.connect('analysis_history.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM analyses ORDER BY timestamp DESC LIMIT 50')
-    analyses = c.fetchall()
-    conn.close()
+    conn = get_db()
+    try:
+        user_id = session.get('user', 'guest')
+        c = conn.cursor()
+        c.execute('SELECT * FROM analyses WHERE user_id = ? ORDER BY timestamp DESC LIMIT 100', (user_id,))
+        analyses = c.fetchall()
+        
+        return jsonify([{
+            'id': a[0], 'timestamp': a[2], 'plant_type': a[3],
+            'health_status': a[4], 'disease_name': a[5], 'symptoms': a[6],
+            'treatment': a[7], 'medicines': a[8], 'severity': a[9],
+            'cost_estimate': a[10], 'image_name': a[11]
+        } for a in analyses])
+    except Exception as e:
+        return jsonify({'error': 'Failed to load history'}), 500
+    finally:
+        conn.close()
+
+@app.route('/get-reminders')
+def get_reminders():
+    conn = get_db()
+    try:
+        user_id = session.get('user', 'guest')
+        c = conn.cursor()
+        c.execute('''SELECT r.*, a.plant_type, a.disease_name FROM reminders r 
+                     JOIN analyses a ON r.analysis_id = a.id 
+                     WHERE r.user_id = ? ORDER BY r.reminder_date ASC LIMIT 200''', (user_id,))
+        reminders = c.fetchall()
+        
+        return jsonify({
+            'reminders': [{
+                'id': r[0], 'analysis_id': r[2], 'reminder_date': r[3],
+                'task': r[4], 'status': r[5], 'proof_image': r[6],
+                'completed_at': r[7], 'plant_type': r[8], 'disease_name': r[9]
+            } for r in reminders],
+            'progress': {'total': len(reminders), 'completed': sum(1 for r in reminders if r[5] == 'completed')}
+        })
+    except Exception as e:
+        return jsonify({'error': 'Failed to load reminders'}), 500
+    finally:
+        conn.close()
+
+# Location and Alerts
+@app.route('/update-location', methods=['POST'])
+def update_location():
+    try:
+        data = request.get_json()
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
+        
+        if not latitude or not longitude:
+            return jsonify({'success': False, 'error': 'Location required'}), 400
+        
+        prompt = f"""Given coordinates latitude {latitude} and longitude {longitude}, provide the city and state/region name.
+Respond in this exact format:
+City: [city name]
+State: [state/region name]"""
+        
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        
+        city = 'Unknown'
+        state = 'Unknown'
+        for line in text.split('\n'):
+            if 'City:' in line:
+                city = line.split(':', 1)[1].strip()
+            elif 'State:' in line:
+                state = line.split(':', 1)[1].strip()
+        
+        return jsonify({'success': True, 'city': city, 'state': state})
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'Failed to get location'}), 500
+
+@app.route('/get-alerts')
+def get_alerts():
+    try:
+        prompt = """Provide 5 common plant disease alerts for current season with preventive measures.
+Format each as:
+Disease: [name]
+Plant: [affected plant]
+Severity: [Mild/Moderate/Severe]
+Prevention: [preventive treatment]
+
+Separate each with a blank line."""
+        
+        response = model.generate_content(prompt)
+        text = response.text.strip()
+        
+        alerts = []
+        current_alert = {}
+        
+        for line in text.split('\n'):
+            line = line.strip()
+            if not line:
+                if current_alert:
+                    alerts.append(current_alert)
+                    current_alert = {}
+                continue
+            
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip().lower()
+                if key == 'disease':
+                    current_alert['disease'] = value.strip()
+                elif key == 'plant':
+                    current_alert['plant'] = value.strip()
+                elif key == 'severity':
+                    current_alert['severity'] = value.strip()
+                elif key == 'prevention':
+                    current_alert['treatment'] = value.strip()
+        
+        if current_alert:
+            alerts.append(current_alert)
+        
+        return jsonify({'alerts': alerts[:5]})
+    except Exception as e:
+        return jsonify({'error': 'Failed to load alerts'}), 500
+
+# Price Comparison
+@app.route('/get-medicine-prices', methods=['POST'])
+def get_medicine_prices():
+    try:
+        data = request.get_json()
+        medicine_name = data.get('medicine', '').strip()
+        
+        if not medicine_name:
+            return jsonify({'error': 'Medicine name required'}), 400
+        
+        prompt = f"""Provide price comparison for agricultural medicine: {medicine_name}
+
+List 5 vendors with this EXACT format:
+
+Vendor: [Vendor Name]
+Price: ₹[amount]
+PackSize: [size with unit]
+Link: [store URL or "In-store only"]
+BulkPrice: ₹[amount for 10+ units]
+
+Use real Indian agricultural stores like BigHaat, AgroStar, KisanKonnect.
+Provide realistic 2024 market prices."""
+        
+        response = model.generate_content(prompt)
+        prices = parse_medicine_prices(response.text)
+        
+        return jsonify({'success': True, 'prices': prices})
+    except Exception as e:
+        return jsonify({'error': 'Failed to fetch prices'}), 500
+
+def parse_medicine_prices(text):
+    vendors = []
+    lines = text.split('\n')
+    current_vendor = {}
     
-    return jsonify([{
-        'id': a[0], 'timestamp': a[1], 'plant_type': a[2],
-        'health_status': a[3], 'disease_name': a[4], 'symptoms': a[5],
-        'treatment': a[6], 'medicines': a[7], 'severity': a[8], 
-        'cost_estimate': a[9], 'image_name': a[10]
-    } for a in analyses])
+    for line in lines:
+        line = line.strip()
+        if not line:
+            if current_vendor.get('vendor'):
+                vendors.append(current_vendor)
+                current_vendor = {}
+            continue
+        
+        if ':' in line:
+            key, value = line.split(':', 1)
+            key = key.strip().lower()
+            value = value.strip()
+            
+            if key == 'vendor':
+                if current_vendor.get('vendor'):
+                    vendors.append(current_vendor)
+                current_vendor = {'vendor': value}
+            elif key == 'price':
+                current_vendor['price'] = value
+            elif key == 'packsize':
+                current_vendor['pack_size'] = value
+            elif key == 'link':
+                current_vendor['link'] = value
+            elif key == 'bulkprice':
+                current_vendor['bulk_price'] = value
+    
+    if current_vendor.get('vendor'):
+        vendors.append(current_vendor)
+    
+    return vendors
 
 @app.route('/export/<analysis_id>')
 def export_pdf(analysis_id):
-    conn = sqlite3.connect('analysis_history.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM analyses WHERE id = ?', (analysis_id,))
-    analysis = c.fetchone()
-    conn.close()
+    if not re.match(r'^[a-f0-9-]{36}$', analysis_id):
+        abort(400)
     
-    if not analysis:
-        return jsonify({'error': 'Analysis not found'}), 404
-    
-    filename = f'report_{analysis_id}.pdf'
-    doc = SimpleDocTemplate(filename, pagesize=letter)
-    styles = getSampleStyleSheet()
-    story = []
-    
-    story.append(Paragraph('Plant Disease Analysis Report', styles['Title']))
-    story.append(Spacer(1, 12))
-    story.append(Paragraph(f'Date: {analysis[1]}', styles['Normal']))
-    story.append(Paragraph(f'Plant Type: {analysis[2]}', styles['Normal']))
-    story.append(Paragraph(f'Health Status: {analysis[3]}', styles['Normal']))
-    story.append(Paragraph(f'Disease: {analysis[4]}', styles['Normal']))
-    story.append(Paragraph(f'Symptoms: {analysis[5]}', styles['Normal']))
-    story.append(Paragraph(f'Treatment: {analysis[6]}', styles['Normal']))
-    story.append(Paragraph(f'Medicines: {analysis[7]}', styles['Normal']))
-    story.append(Paragraph(f'Severity: {analysis[8]}', styles['Normal']))
-    story.append(Paragraph(f'Cost Estimate: {analysis[9]}', styles['Normal']))
-    
-    doc.build(story)
-    return send_file(filename, as_attachment=True)
+    conn = get_db()
+    try:
+        user_id = session.get('user', 'guest')
+        c = conn.cursor()
+        c.execute('SELECT * FROM analyses WHERE id = ? AND user_id = ?', (analysis_id, user_id))
+        analysis = c.fetchone()
+        
+        if not analysis:
+            abort(404)
+        
+        filename = os.path.join(UPLOAD_FOLDER, f'report_{secrets.token_hex(8)}.pdf')
+        doc = SimpleDocTemplate(filename, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = [
+            Paragraph('Plant Disease Analysis Report', styles['Title']),
+            Spacer(1, 12),
+            Paragraph(f'Date: {html.escape(str(analysis[2]))}', styles['Normal']),
+            Paragraph(f'Plant: {html.escape(str(analysis[3]))}', styles['Normal']),
+            Paragraph(f'Status: {html.escape(str(analysis[4]))}', styles['Normal']),
+            Paragraph(f'Disease: {html.escape(str(analysis[5]))}', styles['Normal']),
+            Paragraph(f'Symptoms: {html.escape(str(analysis[6]))}', styles['Normal']),
+            Paragraph(f'Treatment: {html.escape(str(analysis[7]))}', styles['Normal']),
+            Paragraph(f'Medicines: {html.escape(str(analysis[8]))}', styles['Normal']),
+            Paragraph(f'Severity: {html.escape(str(analysis[9]))}', styles['Normal']),
+            Paragraph(f'Cost: {html.escape(str(analysis[10]))}', styles['Normal'])
+        ]
+        doc.build(story)
+        
+        return send_file(filename, as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': 'Export failed'}), 500
+    finally:
+        conn.close()
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({'error': 'Internal error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=True)

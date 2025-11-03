@@ -4,3 +4,9 @@ pillow
 python-dotenv
 reportlab
 supabase
+werkzeug
+flask-limiter
+flask-talisman
+bleach
+gunicorn
+requests

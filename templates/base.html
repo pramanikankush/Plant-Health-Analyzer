@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>{% block title %}Plant Health Analyzer{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#22c55e",
+                "background-light": "#f8fafc",
+                "background-dark": "#0f172a",
+                "surface-light": "#ffffff",
+                "surface-dark": "#1e293b",
+                "text-light": "#020617",
+                "text-dark": "#f8fafc",
+                "muted-light": "#64748b",
+                "muted-dark": "#94a3b8"
+              },
+              fontFamily: {
+                display: ["Poppins", "sans-serif"],
+              },
+            },
+          },
+        };
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+    <div class="min-h-screen flex flex-col">
+        {% include 'components/navbar.html' %}
+        
+        <main class="flex-grow">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    {% include 'components/theme_script.html' %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>

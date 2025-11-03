@@ -1,258 +1,246 @@
 # 🌱 Plant Health Analyzer
 
-A comprehensive Flask web application that uses Google's Gemini AI and Supabase authentication to detect plant diseases from leaf images and provide treatment recommendations for farmers.
+**Production-ready Flask application** using Google Gemini AI for plant disease detection with enterprise-grade security.
 
-## 🚀 Features
+[![Security](https://img.shields.io/badge/security-hardened-green.svg)](SECURITY.md)
+[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://python.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-### 🔐 Authentication System
-- **User Registration & Login** - Secure authentication via Supabase
-- **Session Management** - Protected routes with login requirements
-- **Email Verification** - Account verification through email
+## ✨ Features
 
-### 🤖 AI-Powered Disease Detection
-- **Google Gemini Integration** - Advanced AI analysis of leaf images
-- **Disease Identification** - Accurate detection of plant diseases
-- **Treatment Recommendations** - Detailed treatment plans with step-by-step instructions
-- **Real Medicine Pricing** - Current Indian market prices from major brands (Tata Rallis, UPL, Bayer, Syngenta, BASF)
-- **Cost Estimation** - Complete treatment cost calculation in ₹
-- **Severity Assessment** - Disease severity classification with visual indicators
+### Core Capabilities
+- 🤖 **AI Disease Detection** - Google Gemini 2.0 Flash for accurate plant disease identification
+- 💊 **Treatment Plans** - Step-by-step treatment with real Indian market medicine prices
+- 📊 **Progress Tracking** - Monitor treatment effectiveness with follow-up analysis
+- ⏰ **Smart Reminders** - Automated treatment schedule notifications
+- 📱 **Multi-Platform** - File upload, camera capture, batch processing (10 images)
+- 📄 **PDF Reports** - Professional analysis reports with cost estimates
+- 🌍 **Location Alerts** - Weather-based disease alerts for your region
 
-### 📱 Multi-Modal Image Input
-- **File Upload** - Drag & drop or click to upload leaf images
-- **Camera Capture** - Real-time camera integration for mobile devices
-- **Batch Processing** - Analyze up to 10 images simultaneously
-- **Image Preview** - Visual confirmation before analysis
+### Security Features (v2.1.1)
+- 🔒 **Rate Limiting** - Protection against brute force and DoS attacks
+- 🛡️ **Input Sanitization** - XSS and injection attack prevention
+- 🔐 **Secure Sessions** - HTTPOnly, SameSite cookies with 24h timeout
+- 📝 **SQL Injection Protection** - Parameterized queries throughout
+- 🚫 **File Upload Security** - Type validation, size limits, secure naming
+- 🔑 **Environment Validation** - Required credentials checked at startup
+- 📊 **Security Headers** - CSP, HSTS, X-Frame-Options configured
 
-### 📊 Data Management
-- **Analysis History** - SQLite database storage of all analyses
-- **PDF Export** - Professional reports with detailed recommendations
-- **Batch Reports** - Export multiple analysis results
-- **Timestamp Tracking** - Complete audit trail of analyses
+## 🚀 Quick Start
 
-### 🎨 User Experience
-- **Responsive Design** - Mobile-first approach with Tailwind CSS
-- **Dark Mode Support** - Automatic theme adaptation
-- **Material Icons** - Intuitive iconography
-- **Real-time Feedback** - Loading states and error handling
+### Prerequisites
+- Python 3.11+
+- [Google Gemini API Key](https://makersuite.google.com/app/apikey)
+- [Supabase Account](https://supabase.com)
 
-## 🛠️ Technology Stack
+### Installation
 
-- **Backend**: Flask (Python)
-- **AI/ML**: Google Gemini 2.0 Flash
-- **Authentication**: Supabase
-- **Database**: SQLite (local), Supabase (auth)
-- **Frontend**: HTML5, Tailwind CSS, JavaScript
-- **PDF Generation**: ReportLab
-- **Image Processing**: Pillow (PIL)
-
-## 📋 Prerequisites
-
-- Python 3.8+
-- Google Gemini API key
-- Supabase account and project
-- Modern web browser with camera support (optional)
-
-## ⚡ Quick Start
-
-### 1. Clone Repository
 ```bash
+# 1. Clone repository
 git clone <repository-url>
 cd college-project
-```
 
-### 2. Install Dependencies
-```bash
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-### 3. Environment Configuration
-Create/update `.env` file:
-```env
-GOOGLE_API_KEY=your_gemini_api_key
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_anon_key
-SECRET_KEY=your_flask_secret_key
-```
+# 3. Generate secret key
+python generate_secret_key.py
 
-### 4. Get API Keys
+# 4. Configure environment
+cp .env.example .env.local
+# Edit .env.local with your credentials
 
-#### Google Gemini API:
-1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create new API key
-3. Copy to `.env` file
+# 5. Initialize database
+python -c "from app import init_db; init_db()"
 
-#### Supabase Setup:
-1. Create account at [Supabase](https://supabase.com)
-2. Create new project
-3. Go to Settings → API
-4. Copy Project URL and anon public key
-5. Add to `.env` file
-
-### 5. Run Application
-```bash
+# 6. Run application
+export FLASK_ENV=development  # Windows: set FLASK_ENV=development
 python app.py
 ```
 
-### 6. Access Application
-Open browser: `http://localhost:5000`
+Access at: **http://localhost:5000**
 
-## 📖 Usage Guide
+### Docker Setup
 
-### First Time Setup
-1. **Register Account**: Visit `/signup` to create account
-2. **Email Verification**: Check email and verify account
-3. **Login**: Access `/login` to sign in
-4. **Start Analysis**: Upload leaf images for disease detection
+```bash
+# Using Docker Compose
+docker-compose up
 
-### Image Analysis Workflow
-1. **Choose Input Method**:
-   - **File Upload**: Select images from device
-   - **Camera**: Capture live photos
-   - **Batch Upload**: Multiple images at once
-
-2. **Upload Images**: Drag & drop or click to select
-3. **Preview**: Review selected images
-4. **Analyze**: Click "Analyze Images" button
-5. **Review Results**: Get detailed disease analysis
-6. **Export Report**: Download PDF with recommendations
-
-### Analysis Results Include:
-- **Plant Type**: Identified plant species
-- **Health Status**: Healthy/Diseased classification
-- **Disease Name**: Specific disease identification
-- **Symptoms**: Detailed symptom description with visual indicators
-- **Treatment**: Comprehensive step-by-step treatment plan
-- **Medicines**: Real Indian market medicines with current prices from brands like Tata Rallis, UPL, Bayer, Syngenta, BASF
-- **Severity**: Disease severity level (Mild/Moderate/Severe)
-- **Cost Estimate**: Total treatment cost in ₹ format
-
-## 📁 Project Structure
-
-```
-college-project/
-├── app.py                 # Main Flask application
-├── requirements.txt       # Python dependencies
-├── .env                  # Environment variables
-├── analysis_history.db   # SQLite database
-├── templates/
-│   ├── index.html        # Main application interface
-│   ├── login.html        # Login page
-│   └── signup.html       # Registration page
-├── static/
-│   ├── app.js           # Frontend JavaScript
-│   └── style.css        # Custom styles
-└── README.md            # Project documentation
+# Or build manually
+docker build -t plant-health-analyzer .
+docker run -p 5000:8080 \
+  -e SECRET_KEY=xxx \
+  -e GOOGLE_API_KEY=xxx \
+  -e SUPABASE_URL=xxx \
+  -e SUPABASE_KEY=xxx \
+  plant-health-analyzer
 ```
 
-## 🔧 Configuration
+## 📋 Environment Variables
 
-### Environment Variables
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `GOOGLE_API_KEY` | Google Gemini API key | Yes |
-| `SUPABASE_URL` | Supabase project URL | Yes |
-| `SUPABASE_KEY` | Supabase anon key | Yes |
-| `SECRET_KEY` | Flask session secret | Yes |
+| `SECRET_KEY` | Flask session secret (32+ bytes) | ✅ |
+| `GOOGLE_API_KEY` | Google Gemini API key | ✅ |
+| `SUPABASE_URL` | Supabase project URL | ✅ |
+| `SUPABASE_KEY` | Supabase anon key | ✅ |
+| `FLASK_ENV` | Environment (development/production) | ❌ |
+| `FLASK_DEBUG` | Debug mode (True/False) | ❌ |
 
-### Database Schema
-```sql
-CREATE TABLE analyses (
-    id TEXT PRIMARY KEY,
-    timestamp TEXT,
-    plant_type TEXT,
-    health_status TEXT,
-    disease_name TEXT,
-    symptoms TEXT,
-    treatment TEXT,
-    medicines TEXT,
-    severity TEXT,
-    cost_estimate TEXT,
-    image_name TEXT
-);
+**Generate secure key:**
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
 ```
+
+## 🏗️ Architecture
+
+```
+├── app.py                    # Main application with security hardening
+├── config.py                 # Environment-based configuration
+├── requirements.txt          # Dependencies with security packages
+├── Dockerfile               # Production container
+├── docker-compose.yml       # Local development setup
+├── templates/               # HTML templates
+├── static/                  # CSS, JS assets
+└── docs/
+    ├── DEPLOYMENT.md        # Deployment guide (Heroku, AWS, GCP)
+    ├── SECURITY.md          # Security documentation
+    └── QUICKSTART.md        # 5-minute setup guide
+```
+
+## 🔐 Security
+
+**OWASP Top 10 Compliant** - See [SECURITY.md](SECURITY.md) for details.
+
+### Rate Limits
+- Login: 5/minute
+- Signup: 3/hour  
+- Analysis: 20/hour
+- API: 30/minute
+- Global: 200/hour
+
+### Input Validation
+- Email format validation
+- Password strength (8+ chars)
+- File type whitelist (images only)
+- File size limits (16MB max)
+- UUID format validation
+- SQL injection prevention
+
+## 📊 API Endpoints
+
+| Endpoint | Method | Rate Limit | Description |
+|----------|--------|------------|-------------|
+| `/health` | GET | Exempt | Health check |
+| `/auth/login` | POST | 5/min | User login |
+| `/auth/signup` | POST | 3/hour | Registration |
+| `/analyze` | POST | 20/hour | Image analysis |
+| `/history` | GET | 30/min | Analysis history |
+| `/export/<id>` | GET | 20/hour | PDF export |
+| `/reminders` | GET | 30/min | Treatment reminders |
 
 ## 🚀 Deployment
 
-### Local Development
+### Heroku (Recommended)
 ```bash
-flask run --debug
+heroku create your-app-name
+heroku config:set SECRET_KEY=xxx GOOGLE_API_KEY=xxx ...
+git push heroku main
 ```
 
-### Production Deployment
-1. Set `DEBUG=False` in app.py
-2. Use production WSGI server (Gunicorn, uWSGI)
-3. Configure reverse proxy (Nginx)
-4. Set secure environment variables
-5. Enable HTTPS
+### AWS / GCP / DigitalOcean
+See [DEPLOYMENT.md](DEPLOYMENT.md) for platform-specific guides.
 
-## 🔒 Security Features
+### Production Checklist
+- [ ] Rotate all API keys
+- [ ] Set `FLASK_ENV=production`
+- [ ] Set `FLASK_DEBUG=False`
+- [ ] Enable HTTPS
+- [ ] Configure monitoring
+- [ ] Set up database backups
+- [ ] Review security headers
 
-- **Authentication Required**: All routes protected
-- **Session Management**: Secure Flask sessions
-- **Input Validation**: File type and size restrictions
-- **Error Handling**: Graceful error management
-- **Environment Variables**: Sensitive data protection
+## 🛠️ Technology Stack
+
+**Backend:**
+- Flask 3.0+ (Web framework)
+- Google Gemini 2.0 (AI/ML)
+- Supabase (Authentication)
+- SQLite/PostgreSQL (Database)
+- Gunicorn (WSGI server)
+
+**Security:**
+- Flask-Limiter (Rate limiting)
+- Flask-Talisman (Security headers)
+- Bleach (Input sanitization)
+
+**Frontend:**
+- Tailwind CSS (Styling)
+- Vanilla JavaScript (Interactivity)
+
+## 📚 Documentation
+
+- **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide
+- **[SECURITY.md](SECURITY.md)** - Security features and best practices
+- **[SECURITY_FIXES.md](SECURITY_FIXES.md)** - Vulnerabilities fixed in v2.1.1
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-**Authentication Errors**:
-- Verify Supabase credentials
-- Check project URL format
-- Ensure email verification
-
-**API Errors**:
-- Validate Google Gemini API key
-- Check API quotas and limits
-- Verify image format support
-
-**Database Issues**:
-- Check file permissions
-- Verify SQLite installation
-- Review database schema
-
-### Debug Mode
+**"SECRET_KEY must be set"**
 ```bash
-export FLASK_DEBUG=1
-python app.py
+python generate_secret_key.py
+# Add output to .env.local
 ```
 
-## 📝 API Endpoints
+**"Invalid credentials"**
+- Verify Supabase URL and key
+- Check user exists and email verified
 
-| Endpoint | Method | Description | Auth Required |
-|----------|--------|-------------|---------------|
-| `/` | GET | Main application | Yes |
-| `/login` | GET | Login page | No |
-| `/signup` | GET | Registration page | No |
-| `/auth/login` | POST | User authentication | No |
-| `/auth/signup` | POST | User registration | No |
-| `/logout` | GET | User logout | Yes |
-| `/analyze` | POST | Image analysis | Yes |
-| `/history` | GET | Analysis history | Yes |
-| `/export/<id>` | GET | PDF export | Yes |
+**"Rate limit exceeded"**
+- Wait a few minutes
+- Adjust limits in `config.py`
+
+**Database errors**
+```bash
+rm analysis_history.db
+python -c "from app import init_db; init_db()"
+```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create feature branch
-3. Make changes
-4. Test thoroughly
-5. Submit pull request
+1. Fork repository
+2. Create feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'Add feature'`)
+4. Push to branch (`git push origin feature/amazing`)
+5. Open Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+MIT License - see [LICENSE](LICENSE) file
 
-## 👥 Support
+## 🔄 Version
 
-For support and questions:
-- Create GitHub issue
-- Check troubleshooting section
-- Review API documentation
+**Current:** v2.1.1 (Security & Deployment Update)
 
-## 🔄 Version History
+**Recent Changes:**
+- ✅ Fixed 10 critical security vulnerabilities
+- ✅ Added rate limiting and input sanitization
+- ✅ Production-ready with Docker support
+- ✅ Comprehensive deployment documentation
 
-- **v2.0.0**: Added Supabase authentication
-- **v1.5.0**: Batch processing and PDF export
-- **v1.0.0**: Initial release with Gemini AI integration
+See [CHANGELOG.md](CHANGELOG.md) for full history.
+
+## 📞 Support
+
+- 📖 Check documentation first
+- 🐛 [Report bugs](https://github.com/your-repo/issues)
+- 💬 [Discussions](https://github.com/your-repo/discussions)
+- 🔒 Security issues: Email maintainers directly
+
+---
+
+**⚠️ Important:** If upgrading from v2.1.0 or earlier, see [SECURITY_FIXES.md](SECURITY_FIXES.md) for required actions.

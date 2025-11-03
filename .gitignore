@@ -1,5 +1,9 @@
-# Environment variables
+# Environment variables - NEVER COMMIT THESE!
 .env
+.env.local
+.env.production
+.env.development
+*.env
 
 # Python
 __pycache__/
@@ -33,6 +37,8 @@ Thumbs.db
 # Generated files
 *.pdf
 report_*.pdf
+proofs/
+uploads/
 
 # Temporary files
 *.tmp

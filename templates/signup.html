@@ -40,11 +40,26 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             
+            let location = {};
+            if (navigator.geolocation) {
+                try {
+                    const position = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject);
+                    });
+                    location = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                } catch (error) {
+                    console.log('Location not available');
+                }
+            }
+            
             try {
                 const response = await fetch('/auth/signup', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({email, password})
+                    body: JSON.stringify({email, password, ...location})
                 });
                 
                 const data = await response.json();

@@ -34,65 +34,47 @@
         };
     </script>
 </head>
-<body class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+<body class="bg-gray-100 dark:bg-background-dark font-display text-text-light dark:text-text-dark">
 <div class="min-h-screen flex flex-col">
-<header class="bg-surface-light dark:bg-surface-dark shadow-sm">
-<div class="container mx-auto px-4 sm:px-6 lg:px-8">
-<div class="flex justify-between items-center h-20">
-<div class="flex items-center gap-3">
-<span class="material-icons text-primary text-3xl">spa</span>
-<h1 class="text-2xl font-bold text-text-light dark:text-text-dark">Plant Health Analyzer</h1>
-</div>
-<div class="flex items-center gap-4">
-<button onclick="showHistory()" class="flex items-center gap-2 bg-primary text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">
-<span class="material-icons">history</span>
-History
-</button>
-<a href="/logout" class="flex items-center gap-2 bg-red-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
-<span class="material-icons">logout</span>
-Logout
-</a>
-</div>
-</div>
-</div>
-</header>
+{% include 'components/navbar.html' %}
 
 <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-<div class="max-w-4xl mx-auto bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg p-8">
-<h2 class="text-3xl font-bold mb-6 text-text-light dark:text-text-dark">Upload Images</h2>
-<div class="border-b border-gray-200 dark:border-gray-700">
-<nav aria-label="Tabs" class="-mb-px flex space-x-8">
-<a onclick="showTab('file')" class="tab-btn border-primary text-primary whitespace-nowrap py-4 px-1 border-b-2 font-medium text-base cursor-pointer" href="#">
+<div class="max-w-3xl mx-auto bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10">
+<h2 class="text-3xl font-bold mb-8 text-center text-gray-900 dark:text-text-dark">Upload Images</h2>
+<div class="border-b border-gray-200 dark:border-gray-700 mb-8">
+<nav aria-label="Tabs" class="-mb-px flex justify-center space-x-12">
+<a onclick="showTab('file')" class="tab-btn text-primary border-b-2 border-primary whitespace-nowrap py-3 px-1 font-medium text-sm cursor-pointer" href="#">
 File Upload
 </a>
-<a onclick="showTab('camera')" class="tab-btn border-transparent text-muted-light dark:text-muted-dark hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-base cursor-pointer" href="#">
+<a onclick="showTab('camera')" class="tab-btn text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-700 dark:hover:text-gray-300 whitespace-nowrap py-3 px-1 font-medium text-sm cursor-pointer" href="#">
 Camera
 </a>
-<a onclick="showTab('batch')" class="tab-btn border-transparent text-muted-light dark:text-muted-dark hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-base cursor-pointer" href="#">
+<a onclick="showTab('batch')" class="tab-btn text-gray-500 dark:text-gray-400 border-b-2 border-transparent hover:text-gray-700 dark:hover:text-gray-300 whitespace-nowrap py-3 px-1 font-medium text-sm cursor-pointer" href="#">
 Batch Upload
 </a>
 </nav>
 </div>
 
-<div class="mt-8">
 <!-- File Upload Tab -->
 <div id="fileTab" class="tab-content">
-<div class="drop-zone flex justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 px-6 py-16">
+<div class="drop-zone flex justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 px-6 py-20">
 <div class="text-center">
-<span class="material-icons text-6xl text-muted-light dark:text-muted-dark mx-auto">cloud_upload</span>
-<div class="mt-4 flex text-sm leading-6 text-gray-600 dark:text-gray-400">
-<label class="relative cursor-pointer rounded-md bg-surface-light dark:bg-surface-dark font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 dark:focus-within:ring-offset-surface-dark hover:text-green-600" for="file-upload">
+<div class="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+<span class="material-icons text-4xl text-gray-400 dark:text-gray-500">cloud_upload</span>
+</div>
+<div class="text-sm text-gray-600 dark:text-gray-400">
+<label class="relative cursor-pointer font-medium text-primary hover:text-green-600" for="file-upload">
 <span>Click to upload</span>
-<input class="sr-only" id="file-upload" name="file-upload" type="file" accept="image/*" multiple/>
+<input class="sr-only" id="file-upload" name="file-upload" type="file" accept="image/*,image/png,image/jpeg,image/jpg,image/webp" multiple/>
 </label>
-<p class="pl-1">or drag and drop leaf images</p>
+<span> or drag and drop leaf images</span>
 </div>
-<p class="text-xs leading-5 text-muted-light dark:text-muted-dark mt-1">Supports JPG, PNG, WebP formats</p>
+<p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Supports JPG, PNG, WebP formats</p>
 </div>
 </div>
-<div class="mt-6 flex justify-center">
-<button onclick="document.getElementById('file-upload').click()" class="inline-flex items-center gap-2 rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors" type="button">
-<span class="material-icons">image_search</span>
+<div class="mt-8 flex justify-center">
+<button onclick="document.getElementById('file-upload').click()" class="inline-flex items-center gap-2 rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-600 transition-colors" type="button">
+<span class="material-icons text-lg">add_photo_alternate</span>
 Select Images
 </button>
 </div>
@@ -100,28 +82,28 @@ Select Images
 
 <!-- Camera Tab -->
 <div id="cameraTab" class="tab-content hidden">
-<div class="flex justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 px-6 py-16">
+<div class="flex justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 px-6 py-20">
 <div class="text-center">
-<video id="cameraPreview" class="camera-preview border rounded mb-4 mx-auto" style="display:none; width: 100%; height: 300px; object-fit: cover;"></video>
+<video id="cameraPreview" class="camera-preview border rounded-lg mb-4 mx-auto" style="display:none; width: 100%; max-width: 500px; height: 300px; object-fit: cover;"></video>
 <canvas id="cameraCanvas" style="display:none;"></canvas>
-<span class="material-icons text-6xl text-muted-light dark:text-muted-dark mx-auto" id="cameraIcon">camera_alt</span>
-<div class="mt-4">
-<p class="text-sm leading-6 text-gray-600 dark:text-gray-400">Use your camera to capture leaf images</p>
-<p class="text-xs leading-5 text-muted-light dark:text-muted-dark mt-1">Position leaf clearly in frame</p>
+<div class="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4" id="cameraIcon">
+<span class="material-icons text-4xl text-gray-400 dark:text-gray-500">camera_alt</span>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-400">Use your camera to capture leaf images</p>
+<p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Position leaf clearly in frame</p>
 </div>
 </div>
-</div>
-<div class="mt-6 flex justify-center gap-4">
-<button onclick="startCamera()" class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors" type="button">
-<span class="material-icons">videocam</span>
+<div class="mt-8 flex justify-center gap-4">
+<button onclick="startCamera()" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors" type="button">
+<span class="material-icons text-lg">videocam</span>
 Start Camera
 </button>
-<button onclick="capturePhoto()" id="captureBtn" class="inline-flex items-center gap-2 rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-green-600 transition-colors" type="button" style="display:none;">
-<span class="material-icons">camera_alt</span>
+<button onclick="capturePhoto()" id="captureBtn" class="inline-flex items-center gap-2 rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-600 transition-colors" type="button" style="display:none;">
+<span class="material-icons text-lg">camera_alt</span>
 Capture Photo
 </button>
-<button onclick="stopCamera()" id="stopBtn" class="inline-flex items-center gap-2 rounded-md bg-red-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-red-700 transition-colors" type="button" style="display:none;">
-<span class="material-icons">stop</span>
+<button onclick="stopCamera()" id="stopBtn" class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition-colors" type="button" style="display:none;">
+<span class="material-icons text-lg">stop</span>
 Stop Camera
 </button>
 </div>
@@ -129,24 +111,23 @@ Stop Camera
 
 <!-- Batch Upload Tab -->
 <div id="batchTab" class="tab-content hidden">
-<div class="drop-zone flex justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 px-6 py-16">
+<div class="drop-zone flex justify-center rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 px-6 py-20">
 <div class="text-center">
-<span class="material-icons text-6xl text-muted-light dark:text-muted-dark mx-auto">collections</span>
-<div class="mt-4">
-<p class="text-sm leading-6 text-gray-600 dark:text-gray-400">Select multiple images for batch analysis</p>
-<p class="text-xs leading-5 text-muted-light dark:text-muted-dark mt-1">Analyze up to 10 images at once</p>
+<div class="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+<span class="material-icons text-4xl text-gray-400 dark:text-gray-500">collections</span>
+</div>
+<p class="text-sm text-gray-600 dark:text-gray-400">Select multiple images for batch analysis</p>
+<p class="text-xs text-gray-500 dark:text-gray-500 mt-2">Analyze up to 10 images at once</p>
 </div>
 </div>
-</div>
-<div class="mt-6 flex justify-center">
-<button onclick="document.getElementById('batchInput').click()" class="inline-flex items-center gap-2 rounded-md bg-primary px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-green-600 transition-colors" type="button">
-<span class="material-icons">add_photo_alternate</span>
+<div class="mt-8 flex justify-center">
+<button onclick="document.getElementById('batchInput').click()" class="inline-flex items-center gap-2 rounded-lg bg-primary px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-600 transition-colors" type="button">
+<span class="material-icons text-lg">add_photo_alternate</span>
 Select Multiple Images
 </button>
-<input class="sr-only" id="batchInput" name="batchInput" type="file" accept="image/*" multiple/>
+<input class="sr-only" id="batchInput" name="batchInput" type="file" accept="image/*,image/png,image/jpeg,image/jpg,image/webp" multiple/>
 </div>
 <div id="batchPreview" class="mt-6 flex flex-wrap justify-center gap-2"></div>
-</div>
 </div>
 
 <!-- Image Preview Section -->
@@ -155,16 +136,16 @@ Select Multiple Images
 <div id="previewContainer" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
 </div>
 
-<div class="mt-10 pt-6 border-t border-gray-200 dark:border-gray-700">
-<button onclick="analyzeImages()" id="analyzeBtn" class="w-full flex justify-center items-center gap-2 rounded-md bg-slate-400 dark:bg-slate-600 px-6 py-4 text-base font-semibold text-white dark:text-slate-300 cursor-not-allowed" type="submit" disabled>
-<span class="material-icons">science</span>
+<div class="mt-10 pt-8 border-t border-gray-200 dark:border-gray-700">
+<button onclick="analyzeImages()" id="analyzeBtn" class="w-full flex justify-center items-center gap-2 rounded-lg bg-slate-400 dark:bg-slate-600 px-6 py-4 text-sm font-semibold text-white dark:text-slate-300 cursor-not-allowed" type="submit" disabled>
+<span class="material-icons text-lg">science</span>
 Analyze Images
 </button>
 </div>
 </div>
 
 <!-- Results Section -->
-<div id="resultsSection" class="mt-8 bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg p-8" style="display:none;">
+<div id="resultsSection" class="mt-8 bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-10" style="display:none;">
 <div class="flex justify-between items-center mb-6">
 <h2 class="text-3xl font-bold text-text-light dark:text-text-dark">Analysis Results</h2>
 <button onclick="exportAllResults()" class="inline-flex items-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-700 transition-colors">
@@ -194,6 +175,7 @@ Export All Reports
 </main>
 </div>
 
+    {% include 'components/theme_script.html' %}
     <script src="{{ url_for('static', filename='app.js') }}"></script>
     <script>
         // Tab functionality
@@ -201,44 +183,16 @@ Export All Reports
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('border-primary', 'text-primary');
-                btn.classList.add('border-transparent', 'text-muted-light', 'dark:text-muted-dark');
+                btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
             });
             
             document.getElementById(tabName + 'Tab').classList.remove('hidden');
-            event.target.classList.remove('border-transparent', 'text-muted-light', 'dark:text-muted-dark');
+            event.target.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
             event.target.classList.add('border-primary', 'text-primary');
         }
         
-        // File input handlers
-        document.getElementById('file-upload').addEventListener('change', function(e) {
-            if (window.analyzer) {
-                window.analyzer.handleFileSelect(e.target.files);
-            }
-        });
+        // File input handlers - removed, handled by app.js
         
-        document.getElementById('batchInput').addEventListener('change', function(e) {
-            if (window.analyzer) {
-                window.analyzer.handleFileSelect(e.target.files);
-            }
-        });
-        
-        // Update analyze button state
-        function updateAnalyzeButton() {
-            const btn = document.getElementById('analyzeBtn');
-            const hasImages = window.analyzer && window.analyzer.selectedImages.length > 0;
-            
-            if (hasImages) {
-                btn.disabled = false;
-                btn.classList.remove('bg-slate-400', 'dark:bg-slate-600', 'cursor-not-allowed');
-                btn.classList.add('bg-primary', 'hover:bg-green-600', 'cursor-pointer');
-            } else {
-                btn.disabled = true;
-                btn.classList.add('bg-slate-400', 'dark:bg-slate-600', 'cursor-not-allowed');
-                btn.classList.remove('bg-primary', 'hover:bg-green-600', 'cursor-pointer');
-            }
-        }
-
-
     </script>
 </body>
 </html>

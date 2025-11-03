@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Disease Alerts - Plant Health Analyzer</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#22c55e",
+                "background-light": "#f8fafc",
+                "background-dark": "#0f172a",
+                "surface-light": "#ffffff",
+                "surface-dark": "#1e293b",
+                "text-light": "#020617",
+                "text-dark": "#f8fafc",
+                "muted-light": "#64748b",
+                "muted-dark": "#94a3b8"
+              },
+              fontFamily: {
+                display: ["Poppins", "sans-serif"],
+              },
+            },
+          },
+        };
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+<div class="min-h-screen flex flex-col">
+{% include 'components/navbar.html' %}
+
+<main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="max-w-5xl mx-auto">
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 mb-6">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-3xl font-bold text-gray-900 dark:text-white">Disease Alerts</h2>
+<button onclick="requestLocation()" class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition-colors">
+<span class="material-icons text-lg">my_location</span>
+Update Location
+</button>
+</div>
+
+<div id="locationInfo" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg hidden">
+<div class="flex items-center gap-2 text-blue-800 dark:text-blue-300">
+<span class="material-icons">location_on</span>
+<span id="locationText" class="font-medium"></span>
+</div>
+</div>
+
+<div id="weatherInfo" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hidden">
+<h3 class="font-semibold text-gray-900 dark:text-white mb-2">Current Weather Conditions</h3>
+<div class="grid grid-cols-3 gap-4 text-sm">
+<div class="flex items-center gap-2">
+<span class="material-icons text-orange-500">thermostat</span>
+<span id="tempText" class="text-gray-700 dark:text-gray-300"></span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-icons text-blue-500">water_drop</span>
+<span id="humidityText" class="text-gray-700 dark:text-gray-300"></span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-icons text-gray-500">cloud</span>
+<span id="descText" class="text-gray-700 dark:text-gray-300"></span>
+</div>
+</div>
+</div>
+
+<div id="noLocation" class="text-center py-12">
+<span class="material-icons text-6xl text-gray-400 mb-4">location_off</span>
+<p class="text-gray-600 dark:text-gray-400 mb-4">Enable location to get disease alerts for your area</p>
+<button onclick="requestLocation()" class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white hover:bg-green-700 transition-colors">
+<span class="material-icons">my_location</span>
+Enable Location
+</button>
+</div>
+
+<div id="alertsContainer" class="space-y-4 hidden"></div>
+
+<div id="noAlerts" class="text-center py-12 hidden">
+<span class="material-icons text-6xl text-green-500 mb-4">check_circle</span>
+<p class="text-gray-600 dark:text-gray-400">No disease alerts for your area at this time</p>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+{% include 'components/theme_script.html' %}
+
+<script>
+let userLocation = null;
+
+async function requestLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        userLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+        };
+
+        try {
+            const response = await fetch('/update-location', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(userLocation)
+            });
+
+            if (response.ok) {
+                loadAlerts();
+            }
+        } catch (error) {
+            console.error('Error updating location:', error);
+        }
+    }, (error) => {
+        alert('Unable to get your location. Please enable location services.');
+    });
+}
+
+async function loadAlerts() {
+    try {
+        const response = await fetch('/get-alerts');
+        const data = await response.json();
+
+        document.getElementById('noLocation').classList.add('hidden');
+
+        if (data.location) {
+            document.getElementById('locationInfo').classList.remove('hidden');
+            document.getElementById('locationText').textContent = `${data.location.city}, ${data.location.state}`;
+        }
+
+        if (data.weather) {
+            document.getElementById('weatherInfo').classList.remove('hidden');
+            document.getElementById('tempText').textContent = `${data.weather.temp}°C`;
+            document.getElementById('humidityText').textContent = `${data.weather.humidity}%`;
+            document.getElementById('descText').textContent = data.weather.description;
+        }
+
+        const container = document.getElementById('alertsContainer');
+        container.innerHTML = '';
+
+        if (data.alerts && data.alerts.length > 0) {
+            document.getElementById('alertsContainer').classList.remove('hidden');
+            document.getElementById('noAlerts').classList.add('hidden');
+
+            data.alerts.forEach(alert => {
+                const severityColors = {
+                    'Severe': 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
+                    'Moderate': 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
+                    'Mild': 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                };
+
+                const severityIcons = {
+                    'Severe': 'error',
+                    'Moderate': 'warning',
+                    'Mild': 'info'
+                };
+
+                const alertCard = `
+                    <div class="p-6 rounded-lg border-2 ${severityColors[alert.severity] || 'bg-gray-50'}">
+                        <div class="flex items-start gap-4">
+                            <span class="material-icons text-3xl ${alert.severity === 'Severe' ? 'text-red-600' : alert.severity === 'Moderate' ? 'text-yellow-600' : 'text-blue-600'}">${severityIcons[alert.severity]}</span>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">${alert.disease}</h3>
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold ${alert.severity === 'Severe' ? 'bg-red-100 text-red-800' : alert.severity === 'Moderate' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}">${alert.severity}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Affects: <span class="font-medium">${alert.plant}</span> | Season: <span class="font-medium">${alert.season}</span></p>
+                                <div class="bg-white dark:bg-gray-700 p-4 rounded-lg">
+                                    <h4 class="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                                        <span class="material-icons text-green-600">medical_services</span>
+                                        Preventive Treatment
+                                    </h4>
+                                    <p class="text-gray-700 dark:text-gray-300">${alert.treatment}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += alertCard;
+            });
+        } else {
+            document.getElementById('alertsContainer').classList.add('hidden');
+            document.getElementById('noAlerts').classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error('Error loading alerts:', error);
+    }
+}
+
+window.onload = () => {
+    loadAlerts();
+};
+</script>
+</body>
+</html>

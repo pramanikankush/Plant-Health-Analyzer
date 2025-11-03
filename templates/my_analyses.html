@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}My Analyses - Plant Health Analyzer{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8">
+    <h2 class="text-3xl font-bold mb-6">My Analyses</h2>
+    <div id="analysesContainer" class="grid gap-4"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    fetch('/history')
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('analysesContainer');
+            data.forEach(a => {
+                container.innerHTML += `
+                    <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-xl font-semibold">${a.plant_type}</h3>
+                                <p class="text-sm text-gray-500">${new Date(a.timestamp).toLocaleString()}</p>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-sm ${a.health_status === 'Healthy' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${a.health_status}</span>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 mb-2"><strong>Disease:</strong> ${a.disease_name}</p>
+                        <p class="text-gray-700 dark:text-gray-300 mb-2"><strong>Severity:</strong> ${a.severity}</p>
+                        <p class="text-gray-700 dark:text-gray-300"><strong>Cost:</strong> ${a.cost_estimate}</p>
+                        <a href="/export/${a.id}" class="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-800">
+                            <span class="material-icons text-sm">download</span>
+                            Download Report
+                        </a>
+                    </div>
+                `;
+            });
+        });
+</script>
+{% endblock %}

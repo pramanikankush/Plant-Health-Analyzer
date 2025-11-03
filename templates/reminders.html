@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Treatment Reminders - PlantCare</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#22c55e",
+                "background-light": "#f8fafc",
+                "background-dark": "#0f172a",
+                "surface-light": "#ffffff",
+                "surface-dark": "#1e293b",
+                "text-light": "#020617",
+                "text-dark": "#f8fafc",
+                "muted-light": "#64748b",
+                "muted-dark": "#94a3b8"
+              },
+              fontFamily: {
+                display: ["Poppins", "sans-serif"],
+              },
+            },
+          },
+        };
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+<div class="min-h-screen flex flex-col">
+{% include 'components/navbar.html' %}
+
+<main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="max-w-5xl mx-auto">
+<div class="flex justify-between items-center mb-8">
+<h2 class="text-3xl font-bold text-gray-900 dark:text-text-dark">Treatment Reminders</h2>
+<button onclick="requestNotificationPermission()" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+<span class="material-icons text-lg">notifications_active</span>
+Enable Notifications
+</button>
+</div>
+
+<!-- Progress Bar -->
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-6">
+<div class="flex justify-between items-center mb-2">
+<h3 class="text-lg font-semibold">Treatment Progress</h3>
+<span id="progressText" class="text-sm text-gray-600 dark:text-gray-400">0/0 completed</span>
+</div>
+<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+<div id="progressBar" class="bg-primary h-3 rounded-full transition-all" style="width: 0%"></div>
+</div>
+</div>
+
+<!-- Tabs -->
+<div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+<nav class="-mb-px flex space-x-8">
+<button onclick="filterReminders('all')" class="filter-btn border-b-2 border-primary text-primary py-3 px-1 font-medium text-sm">
+All (<span id="countAll">0</span>)
+</button>
+<button onclick="filterReminders('pending')" class="filter-btn border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 py-3 px-1 font-medium text-sm">
+Pending (<span id="countPending">0</span>)
+</button>
+<button onclick="filterReminders('completed')" class="filter-btn border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 py-3 px-1 font-medium text-sm">
+Completed (<span id="countCompleted">0</span>)
+</button>
+</nav>
+</div>
+
+<!-- Reminders List -->
+<div id="remindersList" class="space-y-4"></div>
+<div id="emptyState" class="hidden text-center py-12">
+<span class="material-icons text-6xl text-gray-300 dark:text-gray-600 mb-4">notifications_none</span>
+<p class="text-gray-500 dark:text-gray-400">No reminders found</p>
+</div>
+</div>
+</main>
+</div>
+
+<!-- Mark as Done Modal -->
+<div id="markDoneModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+<div class="flex items-center justify-center min-h-screen p-4">
+<div class="bg-white dark:bg-surface-dark rounded-xl max-w-md w-full p-6 shadow-2xl">
+<h3 class="text-xl font-bold mb-4">Mark as Done</h3>
+<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Upload proof photo (optional)</p>
+<input type="file" id="proofInput" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-green-600 mb-4"/>
+<div class="flex gap-3">
+<button onclick="submitMarkDone()" class="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-green-600">Submit</button>
+<button onclick="closeMarkDoneModal()" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">Cancel</button>
+</div>
+</div>
+</div>
+</div>
+
+{% include 'components/theme_script.html' %}
+<script>
+let remindersData = [];
+let currentFilter = 'all';
+let selectedReminderId = null;
+
+async function loadReminders() {
+    try {
+        const response = await fetch('/get-reminders');
+        const data = await response.json();
+        remindersData = data.reminders;
+        updateProgress(data.progress);
+        updateCounts();
+        renderReminders();
+        checkPendingReminders();
+    } catch (error) {
+        console.error('Failed to load reminders:', error);
+    }
+}
+
+function updateProgress(progress) {
+    const percentage = progress.total > 0 ? (progress.completed / progress.total * 100) : 0;
+    document.getElementById('progressBar').style.width = percentage + '%';
+    document.getElementById('progressText').textContent = `${progress.completed}/${progress.total} completed`;
+}
+
+function updateCounts() {
+    document.getElementById('countAll').textContent = remindersData.length;
+    document.getElementById('countPending').textContent = remindersData.filter(r => r.status === 'pending').length;
+    document.getElementById('countCompleted').textContent = remindersData.filter(r => r.status === 'completed').length;
+}
+
+function filterReminders(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('border-primary', 'text-primary');
+        btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    });
+    event.target.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    event.target.classList.add('border-primary', 'text-primary');
+    renderReminders();
+}
+
+function renderReminders() {
+    const filtered = currentFilter === 'all' ? remindersData : remindersData.filter(r => r.status === currentFilter);
+    const container = document.getElementById('remindersList');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    }
+    
+    emptyState.classList.add('hidden');
+    container.innerHTML = filtered.map(r => {
+        const date = new Date(r.reminder_date);
+        const isPast = date < new Date();
+        const isToday = date.toDateString() === new Date().toDateString();
+        
+        return `
+            <div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border ${isPast && r.status === 'pending' ? 'border-red-300' : 'border-gray-100 dark:border-gray-700'} p-6">
+                <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="material-icons text-primary">eco</span>
+                            <h3 class="font-semibold text-lg">${r.plant_type} - ${r.disease_name}</h3>
+                            ${r.status === 'completed' ? '<span class="material-icons text-green-500 text-sm">check_circle</span>' : ''}
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-3">${r.task}</p>
+                        <div class="flex items-center gap-4 text-sm">
+                            <span class="flex items-center gap-1 ${isToday ? 'text-orange-600 font-semibold' : 'text-gray-500 dark:text-gray-400'}">
+                                <span class="material-icons text-sm">event</span>
+                                ${date.toLocaleDateString()} ${isToday ? '(Today)' : ''}
+                            </span>
+                            ${r.status === 'completed' ? `<span class="flex items-center gap-1 text-green-600">
+                                <span class="material-icons text-sm">check</span>
+                                Completed ${new Date(r.completed_at).toLocaleDateString()}
+                            </span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        ${r.status === 'pending' ? `
+                            <button onclick="openMarkDoneModal('${r.id}')" class="inline-flex items-center gap-1 bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-green-600">
+                                <span class="material-icons text-sm">check</span>
+                                Mark Done
+                            </button>
+                        ` : ''}
+                        ${r.proof_image ? `<button class="text-blue-600 text-sm">View Proof</button>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function openMarkDoneModal(reminderId) {
+    selectedReminderId = reminderId;
+    document.getElementById('markDoneModal').classList.remove('hidden');
+}
+
+function closeMarkDoneModal() {
+    selectedReminderId = null;
+    document.getElementById('proofInput').value = '';
+    document.getElementById('markDoneModal').classList.add('hidden');
+}
+
+async function submitMarkDone() {
+    if (!selectedReminderId) return;
+    
+    const formData = new FormData();
+    const proofFile = document.getElementById('proofInput').files[0];
+    if (proofFile) {
+        formData.append('proof', proofFile);
+    }
+    
+    try {
+        const response = await fetch(`/mark-done/${selectedReminderId}`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            closeMarkDoneModal();
+            loadReminders();
+            showNotification('Task marked as completed!');
+        }
+    } catch (error) {
+        console.error('Failed to mark as done:', error);
+    }
+}
+
+function requestNotificationPermission() {
+    if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                showNotification('Notifications enabled! You will receive treatment reminders.');
+            }
+        });
+    }
+}
+
+function showNotification(message) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('PlantCare', { body: message, icon: '/static/icon.png' });
+    }
+}
+
+function checkPendingReminders() {
+    const pending = remindersData.filter(r => {
+        const date = new Date(r.reminder_date);
+        const today = new Date();
+        return r.status === 'pending' && date.toDateString() === today.toDateString();
+    });
+    
+    if (pending.length > 0) {
+        showNotification(`You have ${pending.length} treatment task(s) due today!`);
+    }
+}
+
+loadReminders();
+setInterval(loadReminders, 60000); // Refresh every minute
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Help Guide - Plant Health Analyzer{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8 max-w-4xl">
+    <h2 class="text-3xl font-bold mb-6">Help Guide</h2>
+    
+    <div class="space-y-6">
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow">
+            <div class="flex items-start gap-4">
+                <span class="material-icons text-blue-600 text-3xl">upload_file</span>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">How to Upload Images</h3>
+                    <p class="text-gray-700 dark:text-gray-300">Click on "Select Images" or drag and drop leaf images. Supports JPG, PNG, and WebP formats. You can upload multiple images at once.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow">
+            <div class="flex items-start gap-4">
+                <span class="material-icons text-green-600 text-3xl">camera_alt</span>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Using Camera</h3>
+                    <p class="text-gray-700 dark:text-gray-300">Switch to the Camera tab, click "Start Camera", position the leaf clearly in frame, and click "Capture Photo" to take a picture.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow">
+            <div class="flex items-start gap-4">
+                <span class="material-icons text-purple-600 text-3xl">analytics</span>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Understanding Results</h3>
+                    <p class="text-gray-700 dark:text-gray-300">Analysis results include plant type, health status, disease identification, symptoms, treatment recommendations, medicine suggestions with prices, and cost estimates.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow">
+            <div class="flex items-start gap-4">
+                <span class="material-icons text-orange-600 text-3xl">download</span>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Exporting Reports</h3>
+                    <p class="text-gray-700 dark:text-gray-300">Click "Download Report" on any analysis to export a PDF with complete details. You can also export multiple reports from the history page.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow">
+            <div class="flex items-start gap-4">
+                <span class="material-icons text-red-600 text-3xl">tips_and_updates</span>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Best Practices</h3>
+                    <ul class="list-disc list-inside text-gray-700 dark:text-gray-300 space-y-2">
+                        <li>Take clear, well-lit photos of affected leaves</li>
+                        <li>Capture both top and bottom of leaves if possible</li>
+                        <li>Include multiple affected areas for better diagnosis</li>
+                        <li>Avoid blurry or dark images</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-surface-light dark:bg-surface-dark p-6 rounded-lg shadow">
+            <div class="flex items-start gap-4">
+                <span class="material-icons text-yellow-600 text-3xl">contact_support</span>
+                <div>
+                    <h3 class="text-xl font-semibold mb-2">Need More Help?</h3>
+                    <p class="text-gray-700 dark:text-gray-300 mb-3">If you have questions or need assistance, please contact our support team.</p>
+                    <a href="mailto:support@planthealthanalyzer.com" class="text-blue-600 hover:text-blue-800">support@planthealthanalyzer.com</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

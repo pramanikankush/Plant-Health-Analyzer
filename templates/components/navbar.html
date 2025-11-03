@@ -1,0 +1,83 @@
+<header class="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700">
+<div class="container mx-auto px-6">
+<div class="flex justify-between items-center h-16">
+<div class="flex items-center gap-2">
+<span class="material-icons text-primary text-2xl">spa</span>
+<h1 class="text-xl font-semibold text-gray-800 dark:text-text-dark">PlantCare</h1>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a href="{{ url_for('index') }}" class="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-icons text-lg">image_search</span>
+<span class="text-sm font-medium">Analyze</span>
+</a>
+<a href="{{ url_for('reminders') }}" class="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-icons text-lg">notifications</span>
+<span class="text-sm font-medium">Reminders</span>
+<span id="reminderBadge" class="hidden bg-red-500 text-white text-xs rounded-full px-2 py-0.5">0</span>
+</a>
+<a href="{{ url_for('progress') }}" class="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-icons text-lg">trending_up</span>
+<span class="text-sm font-medium">Progress</span>
+</a>
+<a href="{{ url_for('alerts') }}" class="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-icons text-lg">warning</span>
+<span class="text-sm font-medium">Alerts</span>
+</a>
+<a href="{{ url_for('cost_reports') }}" class="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+<span class="material-icons text-lg">currency_rupee</span>
+<span class="text-sm font-medium">Prices</span>
+</a>
+</nav>
+<div class="flex items-center gap-4">
+<button onclick="toggleTheme()" class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-icons text-gray-700 dark:text-gray-300" id="themeIcon">dark_mode</span>
+</button>
+<button onclick="toggleUserMenu(event)" class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+<span class="material-icons text-gray-700 dark:text-gray-300">person</span>
+</button>
+</div>
+<div id="userMenu" class="hidden absolute right-6 top-16 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+<a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+<span class="material-icons text-gray-600 dark:text-gray-400">settings</span>
+<span class="text-gray-700 dark:text-gray-300">Profile Settings</span>
+</a>
+<a href="{{ url_for('help_guide') }}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+<span class="material-icons text-gray-600 dark:text-gray-400">help</span>
+<span class="text-gray-700 dark:text-gray-300">Help Guide</span>
+</a>
+<div class="border-t border-gray-200 dark:border-gray-700"></div>
+<a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-red-600">
+<span class="material-icons">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</div>
+</div>
+</header>
+<script>
+function toggleUserMenu(event) {
+    event.stopPropagation();
+    const menu = document.getElementById('userMenu');
+    menu.classList.toggle('hidden');
+}
+
+document.addEventListener('click', function() {
+    document.getElementById('userMenu').classList.add('hidden');
+});
+
+if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
+    fetch('/get-reminders', { credentials: 'same-origin' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (data && data.reminders) {
+                const pending = data.reminders.filter(r => r.status === 'pending').length;
+                const badge = document.getElementById('reminderBadge');
+                if (pending > 0) {
+                    badge.textContent = pending;
+                    badge.classList.remove('hidden');
+                }
+            }
+        })
+        .catch(() => {});
+}
+</script>

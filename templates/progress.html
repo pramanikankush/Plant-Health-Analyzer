@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Treatment Progress - PlantCare</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#22c55e",
+                "background-light": "#f8fafc",
+                "background-dark": "#0f172a",
+                "surface-light": "#ffffff",
+                "surface-dark": "#1e293b",
+                "text-light": "#020617",
+                "text-dark": "#f8fafc",
+                "muted-light": "#64748b",
+                "muted-dark": "#94a3b8"
+              },
+              fontFamily: {
+                display: ["Poppins", "sans-serif"],
+              },
+            },
+          },
+        };
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+<div class="min-h-screen flex flex-col">
+{% include 'components/navbar.html' %}
+
+<main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="max-w-6xl mx-auto">
+<div class="flex justify-between items-center mb-8">
+<h2 class="text-3xl font-bold text-gray-900 dark:text-text-dark">Treatment Progress</h2>
+<button onclick="showFollowupModal()" class="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-600 transition-colors">
+<span class="material-icons text-lg">add_circle</span>
+New Follow-up
+</button>
+</div>
+
+<div id="progressContainer" class="space-y-6"></div>
+<div id="emptyState" class="hidden text-center py-16">
+<span class="material-icons text-gray-400 text-6xl mb-4">timeline</span>
+<p class="text-gray-500 dark:text-gray-400 text-lg">No progress tracking yet</p>
+<p class="text-gray-400 dark:text-gray-500 text-sm mt-2">Start by analyzing a plant, then create a follow-up analysis to track improvement</p>
+</div>
+</div>
+</main>
+
+<!-- Follow-up Modal -->
+<div id="followupModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+<div class="bg-white dark:bg-surface-dark rounded-xl max-w-2xl w-full mx-4 p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-2xl font-bold text-text-light dark:text-text-dark">Create Follow-up Analysis</h3>
+<button onclick="hideFollowupModal()" class="text-gray-500 hover:text-gray-700">
+<span class="material-icons">close</span>
+</button>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-medium mb-2">Select Original Analysis</label>
+<select id="originalAnalysisSelect" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800">
+<option value="">Choose an analysis...</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-medium mb-2">Upload Current Image</label>
+<input type="file" id="followupImage" accept="image/*" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800"/>
+</div>
+<div class="flex gap-3 pt-4">
+<button onclick="submitFollowup()" class="flex-1 bg-primary text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
+Create Follow-up
+</button>
+<button onclick="hideFollowupModal()" class="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+Cancel
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Comparison Modal -->
+<div id="comparisonModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto">
+<div class="flex items-center justify-center min-h-screen p-4">
+<div class="bg-white dark:bg-surface-dark rounded-xl max-w-5xl w-full p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-2xl font-bold text-text-light dark:text-text-dark">Before & After Comparison</h3>
+<button onclick="hideComparisonModal()" class="text-gray-500 hover:text-gray-700">
+<span class="material-icons">close</span>
+</button>
+</div>
+<div id="comparisonContent"></div>
+</div>
+</div>
+</div>
+</div>
+
+{% include 'components/theme_script.html' %}
+<script>
+let progressData = [];
+let analysesHistory = [];
+
+async function loadProgress() {
+    try {
+        const response = await fetch('/get-progress');
+        progressData = await response.json();
+        displayProgress();
+    } catch (error) {
+        console.error('Failed to load progress:', error);
+    }
+}
+
+async function loadAnalysesHistory() {
+    try {
+        const response = await fetch('/history');
+        analysesHistory = await response.json();
+        populateAnalysisSelect();
+    } catch (error) {
+        console.error('Failed to load history:', error);
+    }
+}
+
+function displayProgress() {
+    const container = document.getElementById('progressContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (progressData.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+    }
+    
+    emptyState.classList.add('hidden');
+    container.innerHTML = progressData.map(p => `
+        <div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h3 class="text-xl font-semibold text-text-light dark:text-text-dark">${escapeHtml(p.plant_type)}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">${escapeHtml(p.disease_name)}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="viewComparison('${p.original_id}', '${p.followup_id}')" class="inline-flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+                        <span class="material-icons text-sm">compare</span> Compare
+                    </button>
+                    <button onclick="exportProgress('${p.id}')" class="inline-flex items-center gap-1 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700">
+                        <span class="material-icons text-sm">download</span> Export
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-icons text-red-600">event</span>
+                        <span class="text-sm font-medium">Original Analysis</span>
+                    </div>
+                    <p class="text-xs text-gray-500">${new Date(p.original_date).toLocaleDateString()}</p>
+                    <p class="text-lg font-semibold mt-2 ${getSeverityColor(p.original_severity)}">${escapeHtml(p.original_severity)}</p>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-icons text-green-600">event</span>
+                        <span class="text-sm font-medium">Follow-up Analysis</span>
+                    </div>
+                    <p class="text-xs text-gray-500">${new Date(p.followup_date).toLocaleDateString()}</p>
+                    <p class="text-lg font-semibold mt-2 ${getSeverityColor(p.followup_severity)}">${escapeHtml(p.followup_severity)}</p>
+                </div>
+                
+                <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 p-4 rounded-lg">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="material-icons text-green-600">trending_up</span>
+                        <span class="text-sm font-medium">Improvement</span>
+                    </div>
+                    <p class="text-3xl font-bold text-green-600">${p.improvement}%</p>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">${escapeHtml(p.severity_change)}</p>
+                </div>
+            </div>
+            
+            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="material-icons text-blue-600">insights</span>
+                    <span class="text-sm font-medium">Progress Summary</span>
+                </div>
+                <p class="text-sm text-gray-700 dark:text-gray-300">
+                    ${getProgressMessage(p.improvement, p.original_severity, p.followup_severity)}
+                </p>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getSeverityColor(severity) {
+    const colors = {
+        'Severe': 'text-red-600',
+        'Moderate': 'text-yellow-600',
+        'Mild': 'text-green-600',
+        'Healthy': 'text-green-600',
+        'None': 'text-green-600'
+    };
+    return colors[severity] || 'text-gray-600';
+}
+
+function getProgressMessage(improvement, original, followup) {
+    if (improvement > 50) {
+        return `Excellent progress! The plant has shown significant improvement from ${original} to ${followup}. Continue the current treatment plan.`;
+    } else if (improvement > 0) {
+        return `Good progress observed. The condition has improved from ${original} to ${followup}. Maintain treatment consistency.`;
+    } else if (improvement === 0) {
+        return `No change in severity. Consider adjusting the treatment plan or consulting an expert.`;
+    } else {
+        return `Condition has worsened. Immediate attention required. Consider alternative treatments.`;
+    }
+}
+
+function showFollowupModal() {
+    loadAnalysesHistory();
+    document.getElementById('followupModal').classList.remove('hidden');
+}
+
+function hideFollowupModal() {
+    document.getElementById('followupModal').classList.add('hidden');
+}
+
+function populateAnalysisSelect() {
+    const select = document.getElementById('originalAnalysisSelect');
+    select.innerHTML = '<option value="">Choose an analysis...</option>' + 
+        analysesHistory.map(a => `
+            <option value="${a.id}">${escapeHtml(a.plant_type)} - ${escapeHtml(a.disease_name)} (${new Date(a.timestamp).toLocaleDateString()})</option>
+        `).join('');
+}
+
+async function submitFollowup() {
+    const originalId = document.getElementById('originalAnalysisSelect').value;
+    const imageFile = document.getElementById('followupImage').files[0];
+    
+    if (!originalId || !imageFile) {
+        alert('Please select an analysis and upload an image');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('image', imageFile);
+    
+    try {
+        const response = await fetch(`/create-followup/${originalId}`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            hideFollowupModal();
+            showNotification(`Follow-up created! Improvement: ${data.improvement}%`, 'success');
+            loadProgress();
+        } else {
+            showNotification(data.error || 'Failed to create follow-up', 'error');
+        }
+    } catch (error) {
+        showNotification('Failed to create follow-up', 'error');
+    }
+}
+
+async function viewComparison(originalId, followupId) {
+    try {
+        const [original, followup] = await Promise.all([
+            fetch('/history').then(r => r.json()).then(data => data.find(a => a.id === originalId)),
+            fetch('/history').then(r => r.json()).then(data => data.find(a => a.id === followupId))
+        ]);
+        
+        const content = document.getElementById('comparisonContent');
+        content.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="border-2 border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="material-icons text-red-600">history</span>
+                        <h4 class="text-lg font-semibold">Before Treatment</h4>
+                    </div>
+                    <div class="space-y-3">
+                        <div><span class="font-medium">Date:</span> ${new Date(original.timestamp).toLocaleDateString()}</div>
+                        <div><span class="font-medium">Plant:</span> ${escapeHtml(original.plant_type)}</div>
+                        <div><span class="font-medium">Disease:</span> ${escapeHtml(original.disease_name)}</div>
+                        <div><span class="font-medium">Severity:</span> <span class="${getSeverityColor(original.severity)}">${escapeHtml(original.severity)}</span></div>
+                        <div><span class="font-medium">Symptoms:</span> <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${escapeHtml(original.symptoms)}</p></div>
+                    </div>
+                </div>
+                
+                <div class="border-2 border-green-200 dark:border-green-800 rounded-lg p-4">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="material-icons text-green-600">check_circle</span>
+                        <h4 class="text-lg font-semibold">After Treatment</h4>
+                    </div>
+                    <div class="space-y-3">
+                        <div><span class="font-medium">Date:</span> ${new Date(followup.timestamp).toLocaleDateString()}</div>
+                        <div><span class="font-medium">Plant:</span> ${escapeHtml(followup.plant_type)}</div>
+                        <div><span class="font-medium">Disease:</span> ${escapeHtml(followup.disease_name)}</div>
+                        <div><span class="font-medium">Severity:</span> <span class="${getSeverityColor(followup.severity)}">${escapeHtml(followup.severity)}</span></div>
+                        <div><span class="font-medium">Symptoms:</span> <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${escapeHtml(followup.symptoms)}</p></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('comparisonModal').classList.remove('hidden');
+    } catch (error) {
+        showNotification('Failed to load comparison', 'error');
+    }
+}
+
+function hideComparisonModal() {
+    document.getElementById('comparisonModal').classList.add('hidden');
+}
+
+function exportProgress(progressId) {
+    window.open(`/export-progress/${progressId}`, '_blank');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
+        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadProgress();
+    
+    // Check if redirected from result card
+    const originalId = sessionStorage.getItem('followupOriginalId');
+    if (originalId) {
+        sessionStorage.removeItem('followupOriginalId');
+        loadAnalysesHistory().then(() => {
+            document.getElementById('originalAnalysisSelect').value = originalId;
+            showFollowupModal();
+        });
+    }
+});
+</script>
+</body>
+</html>

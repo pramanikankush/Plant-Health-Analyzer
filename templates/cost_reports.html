@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Medicine Prices - PlantCare</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              colors: {
+                primary: "#22c55e",
+                "background-light": "#f8fafc",
+                "background-dark": "#0f172a",
+                "surface-light": "#ffffff",
+                "surface-dark": "#1e293b",
+                "text-light": "#020617",
+                "text-dark": "#f8fafc",
+                "muted-light": "#64748b",
+                "muted-dark": "#94a3b8"
+              },
+              fontFamily: {
+                display: ["Poppins", "sans-serif"],
+              },
+            },
+          },
+        };
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-background-dark font-display text-text-light dark:text-text-dark">
+<div class="min-h-screen flex flex-col">
+{% include 'components/navbar.html' %}
+
+<main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+<div class="max-w-6xl mx-auto">
+<div class="mb-8">
+<h2 class="text-3xl font-bold text-gray-900 dark:text-text-dark mb-2">Medicine Price Comparison</h2>
+<p class="text-gray-600 dark:text-gray-400">Compare prices from multiple vendors and find the best deals</p>
+</div>
+
+<!-- Search Section -->
+<div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+<div class="flex gap-4">
+<div class="flex-1">
+<input type="text" id="medicineSearch" placeholder="Enter medicine name (e.g., Mancozeb, Imidacloprid)" 
+       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 px-4 py-3"/>
+</div>
+<button onclick="searchPrices()" class="bg-primary text-white px-8 py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2">
+<span class="material-icons">search</span>
+Search Prices
+</button>
+</div>
+</div>
+
+<!-- Quick Search Buttons -->
+<div class="mb-8">
+<p class="text-sm font-medium mb-3">Popular Medicines:</p>
+<div class="flex flex-wrap gap-2">
+<button onclick="quickSearch('Mancozeb')" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Mancozeb</button>
+<button onclick="quickSearch('Imidacloprid')" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Imidacloprid</button>
+<button onclick="quickSearch('Copper Oxychloride')" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Copper Oxychloride</button>
+<button onclick="quickSearch('Streptocycline')" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600">Streptocycline</button>
+<button onclick="quickSearch('NPK 19:19:19')" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg text-sm hover:bg-gray-300 dark:hover:bg-gray-600">NPK Fertilizer</button>
+</div>
+</div>
+
+<!-- Loading State -->
+<div id="loadingState" class="hidden text-center py-12">
+<div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+<p class="mt-4 text-gray-600 dark:text-gray-400">Fetching prices from vendors...</p>
+</div>
+
+<!-- Results Section -->
+<div id="resultsSection" class="hidden">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-2xl font-bold text-gray-900 dark:text-text-dark">Price Comparison for <span id="medicineName" class="text-primary"></span></h3>
+<div class="flex gap-2">
+<button onclick="sortByPrice()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-1">
+<span class="material-icons text-sm">sort</span> Sort by Price
+</button>
+</div>
+</div>
+
+<!-- Best Deal Banner -->
+<div id="bestDeal" class="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl p-6 mb-6 shadow-lg">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-icons text-3xl">local_offer</span>
+<div>
+<p class="text-sm opacity-90">Best Deal</p>
+<h4 class="text-2xl font-bold" id="bestVendor"></h4>
+</div>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<p class="text-3xl font-bold" id="bestPrice"></p>
+<p class="text-sm opacity-90" id="bestPackSize"></p>
+</div>
+<button onclick="buyNow(0)" class="bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2">
+<span class="material-icons">shopping_cart</span> Buy Now
+</button>
+</div>
+</div>
+
+<!-- Price Cards -->
+<div id="priceCards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"></div>
+
+<!-- Bulk Purchase Section -->
+<div class="bg-yellow-50 dark:bg-yellow-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-xl p-6">
+<div class="flex items-start gap-4">
+<span class="material-icons text-yellow-600 text-3xl">groups</span>
+<div class="flex-1">
+<h4 class="text-xl font-bold text-gray-900 dark:text-text-dark mb-2">Bulk Purchase for Farmer Groups</h4>
+<p class="text-gray-700 dark:text-gray-300 mb-4">Save more by ordering in bulk! Special prices for orders of 10+ units.</p>
+<div id="bulkPrices" class="space-y-2"></div>
+<button onclick="contactBulk()" class="mt-4 bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2">
+<span class="material-icons">contact_mail</span> Contact for Bulk Orders
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Empty State -->
+<div id="emptyState" class="text-center py-16">
+<span class="material-icons text-gray-400 text-6xl mb-4">search</span>
+<p class="text-gray-500 dark:text-gray-400 text-lg">Search for a medicine to compare prices</p>
+<p class="text-gray-400 dark:text-gray-500 text-sm mt-2">Get the best deals from multiple vendors</p>
+</div>
+</div>
+</main>
+</div>
+
+{% include 'components/theme_script.html' %}
+<script>
+let currentPrices = [];
+let currentMedicine = '';
+
+function quickSearch(medicine) {
+    document.getElementById('medicineSearch').value = medicine;
+    searchPrices();
+}
+
+async function searchPrices() {
+    const medicine = document.getElementById('medicineSearch').value.trim();
+    
+    if (!medicine) {
+        showNotification('Please enter a medicine name', 'error');
+        return;
+    }
+    
+    currentMedicine = medicine;
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('resultsSection').classList.add('hidden');
+    document.getElementById('loadingState').classList.remove('hidden');
+    
+    try {
+        const response = await fetch('/get-medicine-prices', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({medicine})
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.prices.length > 0) {
+            currentPrices = data.prices;
+            displayResults();
+        } else {
+            showNotification('No prices found', 'error');
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+        }
+    } catch (error) {
+        showNotification('Failed to fetch prices', 'error');
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+    }
+}
+
+function displayResults() {
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('resultsSection').classList.remove('hidden');
+    document.getElementById('medicineName').textContent = currentMedicine;
+    
+    // Find best deal
+    const sortedPrices = [...currentPrices].sort((a, b) => {
+        const priceA = parseInt(a.price.replace(/[^\d]/g, ''));
+        const priceB = parseInt(b.price.replace(/[^\d]/g, ''));
+        return priceA - priceB;
+    });
+    
+    const best = sortedPrices[0];
+    document.getElementById('bestVendor').textContent = best.vendor;
+    document.getElementById('bestPrice').textContent = best.price;
+    document.getElementById('bestPackSize').textContent = best.pack_size || 'Standard Pack';
+    
+    // Display price cards
+    const container = document.getElementById('priceCards');
+    container.innerHTML = currentPrices.map((p, i) => `
+        <div class="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-text-dark">${escapeHtml(p.vendor)}</h4>
+                    <p class="text-sm text-gray-500">${escapeHtml(p.pack_size || 'Standard Pack')}</p>
+                </div>
+                ${i === 0 ? '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Best Price</span>' : ''}
+            </div>
+            <div class="mb-4">
+                <p class="text-3xl font-bold text-primary">${escapeHtml(p.price)}</p>
+                ${p.bulk_price ? `<p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Bulk: ${escapeHtml(p.bulk_price)}</p>` : ''}
+            </div>
+            <button onclick="buyNow(${i})" class="w-full bg-primary text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2">
+                <span class="material-icons">shopping_cart</span>
+                ${p.link && p.link !== 'In-store only' ? 'Buy Online' : 'Find in Store'}
+            </button>
+        </div>
+    `).join('');
+    
+    // Display bulk prices
+    const bulkContainer = document.getElementById('bulkPrices');
+    bulkContainer.innerHTML = currentPrices
+        .filter(p => p.bulk_price)
+        .map(p => `
+            <div class="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-lg">
+                <span class="font-medium">${escapeHtml(p.vendor)}</span>
+                <span class="text-yellow-600 font-bold">${escapeHtml(p.bulk_price)} (10+ units)</span>
+            </div>
+        `).join('');
+}
+
+function sortByPrice() {
+    currentPrices.sort((a, b) => {
+        const priceA = parseInt(a.price.replace(/[^\d]/g, ''));
+        const priceB = parseInt(b.price.replace(/[^\d]/g, ''));
+        return priceA - priceB;
+    });
+    displayResults();
+}
+
+function buyNow(index) {
+    const vendor = currentPrices[index];
+    if (vendor.link && vendor.link !== 'In-store only') {
+        window.open(vendor.link, '_blank');
+    } else {
+        showNotification(`Visit ${vendor.vendor} store to purchase`, 'info');
+    }
+}
+
+function contactBulk() {
+    showNotification('Bulk order inquiry sent! We will contact you soon.', 'success');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg text-white z-50 ${
+        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+// Auto-search if medicine in URL
+const urlParams = new URLSearchParams(window.location.search);
+const medicine = urlParams.get('medicine');
+if (medicine) {
+    document.getElementById('medicineSearch').value = medicine;
+    searchPrices();
+}
+</script>
+</body>
+</html>

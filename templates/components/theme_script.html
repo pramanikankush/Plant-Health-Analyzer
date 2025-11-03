@@ -1,0 +1,38 @@
+<script>
+function toggleTheme() {
+    const html = document.documentElement;
+    const icon = document.getElementById('themeIcon');
+    if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        icon.textContent = 'dark_mode';
+        localStorage.setItem('theme', 'light');
+    } else {
+        html.classList.add('dark');
+        icon.textContent = 'light_mode';
+        localStorage.setItem('theme', 'dark');
+    }
+}
+
+function toggleUserMenu(e) {
+    e.stopPropagation();
+    document.getElementById('userMenu').classList.toggle('hidden');
+}
+
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('userMenu');
+    if (menu && !e.target.closest('#userMenu') && !e.target.closest('button[onclick="toggleUserMenu(event)"]')) {
+        menu.classList.add('hidden');
+    }
+});
+
+if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+    if (document.getElementById('themeIcon')) {
+        document.getElementById('themeIcon').textContent = 'light_mode';
+    }
+} else {
+    if (document.getElementById('themeIcon')) {
+        document.getElementById('themeIcon').textContent = 'dark_mode';
+    }
+}
+</script>
