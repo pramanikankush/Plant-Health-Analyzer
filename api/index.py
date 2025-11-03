@@ -1,27 +1,15 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, abort
+from flask import Flask, render_template, request, jsonify
 import google.generativeai as genai
 import os
 from PIL import Image
 import io
-from datetime import datetime, timedelta
 import uuid
-from supabase import create_client, Client
-from functools import wraps
 from werkzeug.utils import secure_filename
-import re
 import html
 
-app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
-# Supabase setup
-supabase_url = os.getenv('SUPABASE_URL')
-supabase_key = os.getenv('SUPABASE_KEY')
-if supabase_url and supabase_key:
-    supabase: Client = create_client(supabase_url, supabase_key)
 
 # Gemini setup
 api_key = os.getenv('GOOGLE_API_KEY')
@@ -35,6 +23,14 @@ def allowed_file(filename):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/login')
+def login():
+    return render_template('login.html')
+
+@app.route('/signup')
+def signup():
+    return render_template('signup.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -114,6 +110,13 @@ def parse_analysis(text):
     
     return parsed
 
-# Vercel handler
-def handler(request):
-    return app
+@app.route('/history')
+def history():
+    return jsonify([])
+
+@app.route('/get-reminders')
+def get_reminders():
+    return jsonify({'reminders': [], 'progress': {'total': 0, 'completed': 0}})
+
+if __name__ == '__main__':
+    app.run(debug=True)
