@@ -16,6 +16,8 @@ api_key = os.getenv('GOOGLE_API_KEY')
 if api_key:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.0-flash-exp')
+else:
+    model = None
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -34,6 +36,9 @@ def signup():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    if not model:
+        return jsonify({'error': 'AI service not configured'}), 500
+        
     try:
         files = request.files.getlist('images') if 'images' in request.files else [request.files.get('image')]
         files = [f for f in files if f and f.filename]
@@ -43,7 +48,7 @@ def analyze():
         
         results = []
         
-        for file in files:
+        for file in files[:5]:  # Limit to 5 images for serverless
             try:
                 filename = secure_filename(file.filename)
                 if not allowed_file(filename):
@@ -51,6 +56,10 @@ def analyze():
                     continue
                 
                 file_data = file.read()
+                if len(file_data) > 5 * 1024 * 1024:  # 5MB limit
+                    results.append({'filename': filename, 'error': 'File too large'})
+                    continue
+                    
                 image = Image.open(io.BytesIO(file_data))
                 
                 prompt = """Analyze this leaf image for plant disease detection. Provide analysis in this EXACT format:
@@ -67,10 +76,9 @@ Cost Estimate: [₹250-300]"""
                 response = model.generate_content([prompt, image])
                 analysis = html.unescape(response.text)
                 parsed = parse_analysis(analysis)
-                analysis_id = str(uuid.uuid4())
                 
                 results.append({
-                    'id': analysis_id,
+                    'id': str(uuid.uuid4()),
                     'filename': filename,
                     'analysis': analysis,
                     'parsed': parsed
@@ -110,6 +118,7 @@ def parse_analysis(text):
     
     return parsed
 
+# Disabled storage features for serverless
 @app.route('/history')
 def history():
     return jsonify([])
@@ -117,6 +126,58 @@ def history():
 @app.route('/get-reminders')
 def get_reminders():
     return jsonify({'reminders': [], 'progress': {'total': 0, 'completed': 0}})
+
+@app.route('/auth/login', methods=['POST'])
+def auth_login():
+    return jsonify({'success': False, 'error': 'Authentication disabled in demo mode'})
+
+@app.route('/auth/signup', methods=['POST'])
+def auth_signup():
+    return jsonify({'success': False, 'error': 'Registration disabled in demo mode'})
+
+@app.route('/reminders')
+def reminders():
+    return render_template('index.html')
+
+@app.route('/progress')
+def progress():
+    return render_template('index.html')
+
+@app.route('/alerts')
+def alerts():
+    return render_template('index.html')
+
+@app.route('/cost-reports')
+def cost_reports():
+    return render_template('index.html')
+
+@app.route('/profile')
+def profile():
+    return render_template('index.html')
+
+@app.route('/help')
+def help_guide():
+    return render_template('index.html')
+
+@app.route('/logout')
+def logout():
+    return render_template('index.html')
+
+@app.route('/export/<analysis_id>')
+def export_pdf(analysis_id):
+    return jsonify({'error': 'Export disabled in demo mode'}), 404
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Not found'}), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    return jsonify({'error': 'Internal server error'}), 500
+
+# Vercel entry point
+def handler(request):
+    return app(request.environ, lambda status, headers: None)
 
 if __name__ == '__main__':
     app.run(debug=True)

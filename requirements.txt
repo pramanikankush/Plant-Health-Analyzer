@@ -1,12 +1,4 @@
-flask
-google-generativeai
-pillow
-python-dotenv
-reportlab
-supabase
-werkzeug
-flask-limiter
-flask-talisman
-bleach
-gunicorn
-requests
+Flask==3.0.0
+google-generativeai==0.8.3
+Pillow==10.1.0
+Werkzeug==3.0.1

@@ -65,19 +65,5 @@ document.addEventListener('click', function() {
     document.getElementById('userMenu').classList.add('hidden');
 });
 
-if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-    fetch('/get-reminders', { credentials: 'same-origin' })
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-            if (data && data.reminders) {
-                const pending = data.reminders.filter(r => r.status === 'pending').length;
-                const badge = document.getElementById('reminderBadge');
-                if (pending > 0) {
-                    badge.textContent = pending;
-                    badge.classList.remove('hidden');
-                }
-            }
-        })
-        .catch(() => {});
-}
+// Reminder badge disabled in serverless mode
 </script>
