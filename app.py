@@ -20,8 +20,6 @@ import secrets
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 UPLOAD_FOLDER = 'uploads'
@@ -74,8 +72,7 @@ def allowed_file(filename):
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'user' not in session:
-            return redirect(url_for('login'))
+        # Note: Session-based auth removed - implement alternative authentication
         return f(*args, **kwargs)
     return decorated
 
@@ -118,7 +115,7 @@ def help_guide():
 
 @app.route('/logout')
 def logout():
-    session.clear()
+    # Note: Session functionality removed - implement alternative logout
     return redirect(url_for('login'))
 
 # Auth
@@ -133,8 +130,7 @@ def auth_login():
         if not response.user:
             return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
         
-        session['user'] = response.user.id
-        session.permanent = True
+        # Note: Session functionality removed - implement alternative user tracking
         return jsonify({'success': True})
     except Exception as e:
         error_msg = str(e)
@@ -166,7 +162,7 @@ def analyze():
         if len(files) > 10:
             return jsonify({'error': 'Maximum 10 images allowed'}), 400
         
-        user_id = session.get('user', 'guest')
+        user_id = 'guest'  # Note: Session removed - implement alternative user identification
         results = []
         
         for file in files:
@@ -282,7 +278,7 @@ def create_reminders(analysis_id, user_id, treatment, cursor, conn):
 def history():
     conn = get_db()
     try:
-        user_id = session.get('user', 'guest')
+        user_id = 'guest'  # Note: Session removed - implement alternative user identification
         c = conn.cursor()
         c.execute('SELECT * FROM analyses WHERE user_id = ? ORDER BY timestamp DESC LIMIT 100', (user_id,))
         analyses = c.fetchall()
@@ -302,7 +298,7 @@ def history():
 def get_reminders():
     conn = get_db()
     try:
-        user_id = session.get('user', 'guest')
+        user_id = 'guest'  # Note: Session removed - implement alternative user identification
         c = conn.cursor()
         c.execute('''SELECT r.*, a.plant_type, a.disease_name FROM reminders r 
                      JOIN analyses a ON r.analysis_id = a.id 
@@ -471,7 +467,7 @@ def export_pdf(analysis_id):
     
     conn = get_db()
     try:
-        user_id = session.get('user', 'guest')
+        user_id = 'guest'  # Note: Session removed - implement alternative user identification
         c = conn.cursor()
         c.execute('SELECT * FROM analyses WHERE id = ? AND user_id = ?', (analysis_id, user_id))
         analysis = c.fetchone()
