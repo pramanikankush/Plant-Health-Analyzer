@@ -6,6 +6,8 @@
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+## demo: https://plant-health-analyzer-1.onrender.com
+
 ## ✨ Features
 
 ### Core Capabilities
